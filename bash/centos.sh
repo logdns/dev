@@ -17,7 +17,7 @@ while [[ $# -ge 1 ]]; do
 [ $EUID -ne 0 ] && echo "Error:This script must be run as root!" && exit 1
 
 [ -n $WDtmp ] && myPASSWORD="$WDtmp"
-[ -z $myPASSWORD ] && myPASSWORD='passwd'
+[ -z $myPASSWORD ] && myPASSWORD='xiaofd.win'
 
 clear && echo -e "\n\033[36m# Install\033[0m\n"
 
