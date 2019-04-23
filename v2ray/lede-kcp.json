@@ -1,0 +1,112 @@
+{
+    "log": {
+        "loglevel": "warning"
+    },
+    "inbound": {
+        "listen": "127.0.0.1",
+        "port": 1280,
+        "protocol": "socks",
+        "settings": {
+            "auth": "noauth",
+            "udp": true,
+            "ip": "127.0.0.1"
+        }
+    },
+    "inbound": {
+        "protocol": "dokodemo-door",
+        "port": 7913,
+        "settings": {
+            "address": "8.8.8.8",
+            "port": 53,
+            "network": "udp",
+            "timeout": 0,
+            "followRedirect": false
+        }
+    },
+    "inboundDetour": [{
+        "domainOverride": ["tls", "http"],
+        "port": 1280,
+        "protocol": "dokodemo-door",
+        "settings": {
+            "network": "tcp,udp",
+            "followRedirect": true
+        }
+    }],
+    "outbound": {
+        "protocol": "vmess",
+        "settings": {
+            "vnext": [{
+                "address": "service-1",
+                "port": 443,
+                "users": [{
+                    "id": "passwd",
+                    "alterId": 32,
+                    "security": "auto",
+                    "level": 1
+                }]
+            }]
+        },
+        "tag": "proxy",
+        "streamSettings": {
+            "network": "kcp",
+            "security": "none",
+            "tlsSettings": {
+                "serverName": "",
+                "allowInsecure": false
+            },
+            "kcpSettings": {
+                "mtu": 1350,
+                "tti": 20,
+                "uplinkCapacity": 5,
+                "downlinkCapacity": 20,
+                "congestion": false,
+                "readBufferSize": 1,
+                "writeBufferSize": 1,
+                "header": {
+                    "type": "wechat-video"
+                }
+            }
+        },
+        "mux": {
+            "enabled": false,
+            "concurrency": 8
+        }
+    },
+    "outboundDetour": [{
+            "protocol": "freedom",
+            "settings": {},
+            "tag": "direct"
+        },
+        {
+            "protocol": "blackhole",
+            "settings": {},
+            "tag": "block"
+        }
+    ],
+    "routing": {
+        "strategy": "rules",
+        "settings": {
+            "rules": [{
+                "type": "field",
+                "ip": [
+                    "0.0.0.0/8",
+                    "10.0.0.0/8",
+                    "100.64.0.0/10",
+                    "127.0.0.0/8",
+                    "169.254.0.0/16",
+                    "172.16.0.0/12",
+                    "192.0.0.0/24",
+                    "192.0.2.0/24",
+                    "192.168.0.0/16",
+                    "198.18.0.0/15",
+                    "198.51.100.0/24",
+                    "203.0.113.0/24",
+                    "::1/128",
+                    "fc00::/7",
+                    "fe80::/10"
+                ],
+                "outboundTag": "blocked"
+            }]
+        }
+    }
+}
