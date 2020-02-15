@@ -1,0 +1,61 @@
+# China
+DOMAIN-SUFFIX,cn,BacktoCN
+DOMAIN-KEYWORD,-cn,BacktoCN
+DOMAIN-KEYWORD,cmbimg,BacktoCN
+DOMAIN-KEYWORD,cebbank,BacktoCN
+DOMAIN-KEYWORD,ccb,BacktoCN
+# > weibo
+DOMAIN-KEYWORD,weibo,BacktoCN
+DOMAIN-KEYWORD,sina,BacktoCN
+DOMAIN-KEYWORD,weibocdn,BacktoCN
+# > xiaomi
+DOMAIN-KEYWORD,xiaomi,BacktoCN
+DOMAIN-KEYWORD,mi,BacktoCN
+DOMAIN-KEYWORD,mi-img,BacktoCN
+DOMAIN-KEYWORD,miui,BacktoCN
+DOMAIN-KEYWORD,duokan,BacktoCN
+DOMAIN-KEYWORD,miwifi,BacktoCN
+# > JD
+DOMAIN-KEYWORD,jd,BacktoCN
+DOMAIN-KEYWORD,360buyimg,BacktoCN
+DOMAIN-KEYWORD,jdpay,BacktoCN
+# > Tencent
+IP-CIDR,134.175.0.0/16,BacktoCN
+USER-AGENT,MOO%E9%9F%B3%E4%B9%90*,BacktoCN
+USER-AGENT,QQ%E9%9F%B3%E4%B9%90,BacktoCN
+DOMAIN-SUFFIX,qqmusic.qq.com,BacktoCN
+DOMAIN-SUFFIX,y.qq.com,BacktoCN
+DOMAIN,aqqmusic.tc.qq.com,BacktoCN
+DOMAIN-KEYWORD,tencent,BacktoCN
+DOMAIN-KEYWORD,qq,BacktoCN
+DOMAIN-KEYWORD,weixin,BacktoCN
+DOMAIN-KEYWORD,gtimg,BacktoCN
+DOMAIN-KEYWORD,myapp,BacktoCN
+DOMAIN-KEYWORD,myqcloud,BacktoCN
+DOMAIN-KEYWORD,tencent-cloud,BacktoCN
+DOMAIN-KEYWORD,WeChat,BacktoCN
+# > Alibaba
+USER-AGENT,xiami*,BacktoCN
+DOMAIN-SUFFIX,xiami.com,BacktoCN
+DOMAIN-SUFFIX,xiami.net,BacktoCN
+DOMAIN-KEYWORD,alipay,BacktoCN
+DOMAIN-KEYWORD,taobao,BacktoCN
+DOMAIN-KEYWORD,alicdn,BacktoCN
+DOMAIN-KEYWORD,tmall,BacktoCN
+DOMAIN-KEYWORD,alibaba,BacktoCN
+DOMAIN-KEYWORD,amap,BacktoCN
+DOMAIN-KEYWORD,aliapp,BacktoCN
+# > Netease
+DOMAIN-KEYWORD,163,BacktoCN
+DOMAIN-KEYWORD,netease,BacktoCN
+DOMAIN-KEYWORD,126,BacktoCN
+DOMAIN-KEYWORD,127,BacktoCN
+DOMAIN-KEYWORD,ydstatic,BacktoCN
+DOMAIN-KEYWORD,163yun,BacktoCN
+# > Baidu
+DOMAIN-KEYWORD,baidu,BacktoCN
+DOMAIN-KEYWORD,baidubcr,BacktoCN
+DOMAIN-KEYWORD,bdstatic,BacktoCN
+DOMAIN-KEYWORD,yunjiasu,BacktoCN
+# GeoIP China
+GEOIP,CN,BacktoCN
