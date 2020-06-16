@@ -12,6 +12,9 @@ wget https://raw.githubusercontent.com/logdns/dev/master/nali/nali-chunzhen-1.0.
 
 rpm -ivh nali-chunzhen-1.0.1-3.x86_64.rpm
 ```
+```bash
+mtr 10.10.10.10 |nali
+```
 
 ```bash
 nali
