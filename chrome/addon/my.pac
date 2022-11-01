@@ -294,4 +294,6 @@
 ||shopify.com,
 ||shopify.com,
 ||azureedge.net,
-||visible.com
+||visible.com,
+||translate.googleapis.com,
+||googleapis.com
