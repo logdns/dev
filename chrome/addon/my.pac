@@ -296,4 +296,6 @@
 ||azureedge.net,
 ||visible.com,
 ||translate.googleapis.com,
-||googleapis.com
+||googleapis.com,
+||hostloc.com,
+||tstartel.com
