@@ -4,7 +4,7 @@
 cd "$(dirname "$0")"
 
 # 安装所需的 npm 包
-npm install node-telegram-bot-api node-cron
+npm install node-telegram-bot-api node-fetch node-cron
 
 # 全局安装 pm2
 npm install -g pm2
