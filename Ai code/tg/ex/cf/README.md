@@ -41,6 +41,8 @@ https://api.telegram.org/botYOUR_BOT_TOKEN/setWebhook?url=YOUR_WORKER_URL/webhoo
 ```
 测试手动触发:
 你可以手动触发 /cron 路径，通过在浏览器中访问 YOUR_WORKER_URL/cron 确保路径处理逻辑正常。
+```
+```
 https://xxxx.xxx.workers.dev/cron
 ```
 ---
