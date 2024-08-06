@@ -38,6 +38,11 @@ https://api.telegram.org/botYOUR_BOT_TOKEN/setWebhook?url=YOUR_WORKER_URL/webhoo
 - 使用 Cron 表达式 `0 */5 * * *`（每5小时运行一次）。
 - 设置 Path 为 `/cron`。
 
+```
+测试手动触发:
+你可以手动触发 /cron 路径，通过在浏览器中访问 YOUR_WORKER_URL/cron 确保路径处理逻辑正常。
+https://xxxx.xxx.workers.dev/cron
+```
 ---
 
 这个代码包含了，包括每5小时更新一次，显示下次更新时间，以及在没有 KV 存储时使用内存存储的备选方案。(为什么是5个小时,因为CF免费版本一天只能5次,超过需要付费计划)
