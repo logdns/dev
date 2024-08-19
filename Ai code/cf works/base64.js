@@ -14,6 +14,7 @@ function handleRequest(request) {
         body {
             font-family: 'Microsoft YaHei', Arial, sans-serif;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
@@ -85,6 +86,19 @@ function handleRequest(request) {
         .copy-btn:hover {
             background-color: #007B9A;
         }
+        footer {
+            margin-top: 20px;
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+        }
+        footer a {
+            color: #008CBA;
+            text-decoration: none;
+        }
+        footer a:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
@@ -98,6 +112,9 @@ function handleRequest(request) {
         <div class="result" id="result"></div>
         <button class="copy-btn" onclick="copyResult()">复制结果</button>
     </div>
+    <footer>
+        <p>由 <a href="https://xinai.de" target="_blank">小沨</a> 提供支持 | <a href="https://github.com/logdns/dev/blob/master/Ai%20code/cf%20works/base64.js" target="_blank">GitHub 源码</a></p>
+    </footer>
 
     <script>
         function encode() {
