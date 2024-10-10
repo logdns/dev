@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # 修改 root 密码
-echo "root:123123" | sudo chpasswd
+echo "root:123123" | chpasswd
 
 # 屏蔽 Include 行
 sed -i 's/^Include \/etc\/ssh\/ssh_config.d\/\*.conf/#Include \/etc\/ssh\/ssh_config.d\/\*.conf/g' /etc/ssh/sshd_config
