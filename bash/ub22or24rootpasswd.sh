@@ -6,4 +6,4 @@ echo "root:123123" | chpasswd
 sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config.d/*; sed -i 's/PermitRootLogin no/PermitRootLogin yes/g' /etc/ssh/sshd_config.d/*
 
 # 重启 SSH 服务
-systemctl restart ssh sshd
+systemctl restart ssh
