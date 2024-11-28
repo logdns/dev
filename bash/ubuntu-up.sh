@@ -52,22 +52,6 @@ check_requirements() {
         exit 1
     fi
 
-    if [ "$current_version" != "18.04" ]; then
-        log "${RED}错误: 此脚本仅支持从 Ubuntu 18.04 Server 升级${NC}"
-        exit 1
-    fi
-
-    # 检查磁盘空间
-    if [ "$available_space" = "未知" ]; then
-        log "${RED}错误: 无法获取磁盘空间信息${NC}"
-        exit 1
-    fi
-
-    if [ $(echo "$available_space < 5" | bc -l) -eq 1 ]; then
-        log "${RED}错误: 磁盘空间不足 (最小需求: 5GB)${NC}"
-        exit 1
-    fi
-
     # 检查网络连接
     if ! ping -c 1 archive.ubuntu.com &>/dev/null; then
         log "${RED}错误: 无法连接到 Ubuntu 存储库${NC}"
