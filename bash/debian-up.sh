@@ -138,11 +138,53 @@ clean_system() {
     apt clean
     apt autoclean
     
-    # 清理旧内核（保留当前使用的内核）
+    # 改进的内核清理逻辑
     echo -e "${YELLOW}清理旧内核...${NC}"
-    dpkg -l | grep linux-image | awk '/^ii/{ print $2}' | \
-    grep -v -e "$(uname -r | sed -r 's/-[a-z]+//')" | \
-    xargs apt -y purge
+    
+    # 获取当前运行的内核版本
+    current_kernel=$(uname -r)
+    echo -e "${BLUE}当前使用的内核版本: $current_kernel${NC}"
+    
+    # 获取已安装的所有内核包列表
+    kernel_packages=$(dpkg -l 'linux-image*' | awk '/^ii/ {print $2}')
+    
+    # 计算要保留的内核包名
+    current_kernel_pkg="linux-image-${current_kernel}"
+    
+    # 逐个检查并删除旧内核
+    for pkg in $kernel_packages; do
+        # 跳过当前内核和必要的内核包
+        if [[ "$pkg" == *"$current_kernel"* ]] || \
+           [[ "$pkg" == "linux-image-amd64" ]] || \
+           [[ "$pkg" == "linux-image-generic" ]]; then
+            echo -e "${GREEN}保留内核包: $pkg${NC}"
+            continue
+        fi
+        
+        echo -e "${YELLOW}正在移除旧内核包: $pkg${NC}"
+        if ! apt-get remove --purge -y "$pkg"; then
+            echo -e "${RED}移除 $pkg 失败，尝试强制移除...${NC}"
+            if ! dpkg --force-all -P "$pkg"; then
+                echo -e "${RED}强制移除 $pkg 也失败，跳过...${NC}"
+            fi
+        fi
+    done
+    
+    # 清理可能存在的孤立内核头文件包
+    echo -e "${YELLOW}清理孤立的内核头文件包...${NC}"
+    header_packages=$(dpkg -l 'linux-headers*' | awk '/^ii/ {print $2}')
+    for pkg in $header_packages; do
+        if [[ "$pkg" != *"$current_kernel"* ]] && \
+           [[ "$pkg" != "linux-headers-amd64" ]] && \
+           [[ "$pkg" != "linux-headers-generic" ]]; then
+            echo -e "${YELLOW}移除旧内核头文件包: $pkg${NC}"
+            apt-get remove --purge -y "$pkg" || dpkg --force-all -P "$pkg"
+        fi
+    done
+    
+    # 最后再次运行自动清理
+    apt-get autoremove -y
+    apt-get clean
     
     echo -e "${GREEN}系统清理完成√${NC}"
 }
