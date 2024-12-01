@@ -134,9 +134,14 @@ backup_configs() {
 clean_system() {
     echo -e "${BLUE}正在清理系统...${NC}"
     
-    apt autoremove -y
-    apt clean
-    apt autoclean
+    # 首先尝试修复系统
+    echo -e "${YELLOW}修复包管理系统...${NC}"
+    dpkg --configure -a
+    apt-get install -f -y
+    
+    apt-get autoremove -y
+    apt-get clean
+    apt-get autoclean
     
     # 改进的内核清理逻辑
     echo -e "${YELLOW}清理旧内核...${NC}"
@@ -228,25 +233,39 @@ EOF
 do_upgrade() {
     echo -e "${BLUE}开始系统升级流程...${NC}"
     
+    # 首先尝试修复可能被中断的dpkg
+    echo -e "${YELLOW}检查并修复dpkg状态...${NC}"
+    dpkg --configure -a
+    
+    # 修复可能的依赖关系问题
+    echo -e "${YELLOW}修复可能的依赖关系问题...${NC}"
+    apt-get install -f -y
+    
     echo -e "${YELLOW}更新软件包信息...${NC}"
-    apt update
+    apt-get clean
+    rm -rf /var/lib/apt/lists/*
+    apt-get update
     show_progress 0.1
     
     echo -e "${YELLOW}升级基础系统包...${NC}"
-    apt install -y apt dpkg apt-utils
+    apt-get install -y apt dpkg apt-utils
     show_progress 0.1
     
+    # 再次检查并修复可能的问题
+    dpkg --configure -a
+    apt-get install -f -y
+    
     echo -e "${YELLOW}执行系统升级...${NC}"
-    apt upgrade -y
+    apt-get upgrade -y
     show_progress 0.1
     
     echo -e "${YELLOW}执行完整升级...${NC}"
-    apt full-upgrade -y
+    apt-get full-upgrade -y
     show_progress 0.1
     
     echo -e "${YELLOW}清理无用包...${NC}"
-    apt autoremove -y
-    apt clean
+    apt-get autoremove -y
+    apt-get clean
     show_progress 0.1
     
     echo -e "${GREEN}升级完成√${NC}"
@@ -260,7 +279,7 @@ check_upgrade_result() {
     if dpkg -l | grep -q "^..F"; then
         echo -e "${RED}警告: 发现损坏的软件包${NC}"
         echo -e "${YELLOW}尝试修复...${NC}"
-        apt install -f
+        apt install -f -y
     fi
     
     # 检查服务状态
