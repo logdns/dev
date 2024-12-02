@@ -11,7 +11,7 @@ PLAIN='\033[0m'
 show_banner() {
     clear
     echo -e "${BLUE}=====================================${PLAIN}"
-    echo -e "${BLUE}       BBR 管理脚本 v1.0           ${PLAIN}"
+    echo -e "${BLUE}       BBR 管理脚本 v1.1           ${PLAIN}"
     echo -e "${BLUE}=====================================${PLAIN}"
     echo ""
 }
@@ -108,22 +108,37 @@ EOF
 disable_bbr() {
     echo -e "${BLUE}正在禁用BBR...${PLAIN}"
     
+    # 立即修改当前运行的内核参数
+    echo "cubic" > /proc/sys/net/ipv4/tcp_congestion_control
+    echo "pfifo_fast" > /proc/sys/net/core/default_qdisc
+    
     # 删除BBR配置文件
     rm -f /etc/sysctl.d/99-bbr.conf
     
-    # 重置网络参数到默认值
+    # 创建新的配置以确保重启后使用默认设置
     cat > /etc/sysctl.d/99-network-default.conf << EOF
 net.core.default_qdisc=pfifo_fast
 net.ipv4.tcp_congestion_control=cubic
 EOF
     
-    # 应用设置
+    # 应用系统设置
     sysctl --system
     
     # 从加载模块列表中移除BBR
     sed -i '/tcp_bbr/d' /etc/modules-load.d/modules.conf
     
-    echo -e "${GREEN}BBR已禁用，系统将在重启后使用默认的TCP拥塞控制算法${PLAIN}"
+    # 尝试卸载BBR模块（如果没有被使用）
+    modprobe -r tcp_bbr 2>/dev/null
+    
+    # 验证是否已禁用
+    current_cc=$(sysctl -n net.ipv4.tcp_congestion_control)
+    if [[ "$current_cc" != "bbr" ]]; then
+        echo -e "${GREEN}BBR已成功禁用，当前使用的拥塞控制算法：${current_cc}${PLAIN}"
+    else
+        echo -e "${RED}BBR禁用失败，请尝试重启系统${PLAIN}"
+    fi
+    
+    echo -e "${YELLOW}注意：某些更改可能需要重启系统才能完全生效${PLAIN}"
 }
 
 # 显示菜单
