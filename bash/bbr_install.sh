@@ -11,7 +11,7 @@ PLAIN='\033[0m'
 show_banner() {
     clear
     echo -e "${BLUE}=====================================${PLAIN}"
-    echo -e "${BLUE}       BBR 管理脚本 v1.1           ${PLAIN}"
+    echo -e "${BLUE}       BBR 管理脚本 v1.2           ${PLAIN}"
     echo -e "${BLUE}=====================================${PLAIN}"
     echo ""
 }
@@ -28,7 +28,7 @@ check_root() {
 check_system() {
     if [[ -f /etc/debian_version ]]; then
         OS="debian"
-    elif [[ -f /etc/ubuntu-release ]]; then
+    elif [[ -f /etc/lsb-release ]]; then
         OS="ubuntu"
     else
         echo -e "${RED}错误：此脚本仅支持Debian和Ubuntu系统${PLAIN}"
@@ -65,6 +65,10 @@ show_status() {
     current_cc=$(sysctl -n net.ipv4.tcp_congestion_control)
     echo -e "当前拥塞控制算法：${GREEN}${current_cc}${PLAIN}"
     echo -e "当前队列调度算法：${GREEN}$(sysctl -n net.core.default_qdisc)${PLAIN}"
+    
+    # 显示可用的拥塞控制算法
+    available_cc=$(cat /proc/sys/net/ipv4/tcp_available_congestion_control)
+    echo -e "可用的拥塞控制算法：${GREEN}${available_cc}${PLAIN}"
     echo
 }
 
@@ -72,12 +76,25 @@ show_status() {
 enable_bbr() {
     echo -e "${BLUE}正在启用BBR...${PLAIN}"
     
+    # 首先删除可能存在的冲突配置
+    rm -f /etc/sysctl.d/99-network-default.conf
+    
     # 加载BBR模块
     modprobe tcp_bbr
-    echo "tcp_bbr" >> /etc/modules-load.d/modules.conf
     
-    # 设置网络参数
-    cat > /etc/sysctl.d/99-bbr.conf << EOF
+    # 确保模块加载
+    if ! lsmod | grep -q "tcp_bbr"; then
+        echo -e "${RED}BBR模块加载失败${PLAIN}"
+        return 1
+    fi
+    
+    # 添加到永久模块列表（如果不存在）
+    if ! grep -q "tcp_bbr" /etc/modules-load.d/modules.conf 2>/dev/null; then
+        echo "tcp_bbr" >> /etc/modules-load.d/modules.conf
+    fi
+    
+    # 使用更高的优先级数字确保最后加载
+    cat > /etc/sysctl.d/99-zzz-bbr-custom.conf << EOF
 # BBR配置
 net.core.default_qdisc=fq
 net.ipv4.tcp_congestion_control=bbr
@@ -91,16 +108,43 @@ net.ipv4.tcp_rmem=4096 87380 16777216
 net.ipv4.tcp_wmem=4096 65536 16777216
 net.ipv4.tcp_fastopen=3
 net.ipv4.tcp_slow_start_after_idle=0
+
+# 其他网络优化
+net.ipv4.tcp_syncookies=1
+net.ipv4.tcp_tw_reuse=1
+net.ipv4.tcp_fin_timeout=30
+net.ipv4.tcp_keepalive_time=1200
+net.ipv4.ip_local_port_range=10000 65000
+net.ipv4.tcp_max_syn_backlog=8192
+net.ipv4.tcp_max_tw_buckets=5000
+net.ipv4.tcp_mtu_probing=1
+net.ipv4.tcp_timestamps=1
+net.ipv4.tcp_sack=1
 EOF
     
-    # 应用设置
-    sysctl --system
+    # 直接设置当前运行的参数
+    sysctl -w net.core.default_qdisc=fq >/dev/null 2>&1
+    sysctl -w net.ipv4.tcp_congestion_control=bbr >/dev/null 2>&1
     
-    # 验证BBR是否启用
-    if sysctl net.ipv4.tcp_congestion_control | grep -q "bbr"; then
+    # 应用所有 sysctl 设置
+    sysctl --system >/dev/null 2>&1
+    
+    # 再次验证设置是否生效
+    sleep 1
+    current_cc=$(sysctl -n net.ipv4.tcp_congestion_control)
+    current_qdisc=$(sysctl -n net.core.default_qdisc)
+    
+    if [[ "$current_cc" == "bbr" && "$current_qdisc" == "fq" ]]; then
         echo -e "${GREEN}BBR已成功启用${PLAIN}"
+        echo -e "当前配置："
+        echo -e "拥塞控制算法: ${GREEN}$current_cc${PLAIN}"
+        echo -e "队列调度算法: ${GREEN}$current_qdisc${PLAIN}"
     else
-        echo -e "${RED}BBR启用失败，请检查系统设置${PLAIN}"
+        echo -e "${RED}BBR启用失败${PLAIN}"
+        echo -e "当前配置："
+        echo -e "拥塞控制算法: ${RED}$current_cc${PLAIN}"
+        echo -e "队列调度算法: ${RED}$current_qdisc${PLAIN}"
+        echo -e "${YELLOW}请尝试重启系统后再次检查${PLAIN}"
     fi
 }
 
@@ -108,37 +152,63 @@ EOF
 disable_bbr() {
     echo -e "${BLUE}正在禁用BBR...${PLAIN}"
     
-    # 立即修改当前运行的内核参数
-    echo "cubic" > /proc/sys/net/ipv4/tcp_congestion_control
-    echo "pfifo_fast" > /proc/sys/net/core/default_qdisc
-    
     # 删除BBR配置文件
-    rm -f /etc/sysctl.d/99-bbr.conf
+    rm -f /etc/sysctl.d/99-zzz-bbr-custom.conf
     
-    # 创建新的配置以确保重启后使用默认设置
-    cat > /etc/sysctl.d/99-network-default.conf << EOF
+    # 创建新的默认配置，使用高优先级确保最后加载
+    cat > /etc/sysctl.d/99-zzz-network-default.conf << EOF
+# 默认网络配置
 net.core.default_qdisc=pfifo_fast
 net.ipv4.tcp_congestion_control=cubic
 EOF
     
+    # 直接设置当前运行的参数
+    sysctl -w net.core.default_qdisc=pfifo_fast >/dev/null 2>&1
+    sysctl -w net.ipv4.tcp_congestion_control=cubic >/dev/null 2>&1
+    
     # 应用系统设置
-    sysctl --system
+    sysctl --system >/dev/null 2>&1
     
     # 从加载模块列表中移除BBR
-    sed -i '/tcp_bbr/d' /etc/modules-load.d/modules.conf
+    sed -i '/tcp_bbr/d' /etc/modules-load.d/modules.conf 2>/dev/null
     
-    # 尝试卸载BBR模块（如果没有被使用）
+    # 尝试卸载BBR模块
     modprobe -r tcp_bbr 2>/dev/null
     
     # 验证是否已禁用
+    sleep 1
     current_cc=$(sysctl -n net.ipv4.tcp_congestion_control)
-    if [[ "$current_cc" != "bbr" ]]; then
-        echo -e "${GREEN}BBR已成功禁用，当前使用的拥塞控制算法：${current_cc}${PLAIN}"
-    else
-        echo -e "${RED}BBR禁用失败，请尝试重启系统${PLAIN}"
-    fi
+    current_qdisc=$(sysctl -n net.core.default_qdisc)
     
-    echo -e "${YELLOW}注意：某些更改可能需要重启系统才能完全生效${PLAIN}"
+    if [[ "$current_cc" == "cubic" && "$current_qdisc" == "pfifo_fast" ]]; then
+        echo -e "${GREEN}BBR已成功禁用${PLAIN}"
+        echo -e "当前配置："
+        echo -e "拥塞控制算法: ${GREEN}$current_cc${PLAIN}"
+        echo -e "队列调度算法: ${GREEN}$current_qdisc${PLAIN}"
+    else
+        echo -e "${RED}BBR禁用失败${PLAIN}"
+        echo -e "当前配置："
+        echo -e "拥塞控制算法: ${RED}$current_cc${PLAIN}"
+        echo -e "队列调度算法: ${RED}$current_qdisc${PLAIN}"
+        echo -e "${YELLOW}请尝试重启系统后再次检查${PLAIN}"
+    fi
+}
+
+# 清理所有配置
+cleanup() {
+    echo -e "${BLUE}正在清理BBR相关配置...${PLAIN}"
+    
+    # 删除所有相关配置文件
+    rm -f /etc/sysctl.d/*bbr*.conf
+    rm -f /etc/sysctl.d/*network*.conf
+    
+    # 重置到系统默认值
+    sysctl --system >/dev/null 2>&1
+    
+    # 从模块列表中移除
+    sed -i '/tcp_bbr/d' /etc/modules-load.d/modules.conf 2>/dev/null
+    
+    echo -e "${GREEN}清理完成${PLAIN}"
 }
 
 # 显示菜单
@@ -149,9 +219,10 @@ show_menu() {
     echo -e "${GREEN}1.${PLAIN} 启用BBR"
     echo -e "${GREEN}2.${PLAIN} 禁用BBR"
     echo -e "${GREEN}3.${PLAIN} 查看当前状态"
-    echo -e "${GREEN}4.${PLAIN} 退出脚本"
+    echo -e "${GREEN}4.${PLAIN} 清理所有配置"
+    echo -e "${GREEN}5.${PLAIN} 退出脚本"
     echo
-    read -p "请输入选项 [1-4]: " choice
+    read -p "请输入选项 [1-5]: " choice
     
     case $choice in
         1)
@@ -164,6 +235,9 @@ show_menu() {
             show_status
             ;;
         4)
+            cleanup
+            ;;
+        5)
             echo -e "${GREEN}感谢使用！${PLAIN}"
             exit 0
             ;;
