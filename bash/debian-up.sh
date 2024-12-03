@@ -47,6 +47,35 @@ show_progress() {
     echo -ne "\n"
 }
 
+# 安装基础组件
+install_base_components() {
+    echo -e "\n${BLUE}开始安装基础组件...${NC}"
+    echo -e "${YELLOW}正在安装: xz-utils openssl gawk file wget${NC}\n"
+    
+    echo -e "${CYAN}Step 1/2: 更新软件源${NC}"
+    apt-get update
+    show_progress 1 "更新软件源"
+    
+    echo -e "\n${CYAN}Step 2/2: 安装组件${NC}"
+    apt-get install -y xz-utils openssl gawk file wget
+    
+    # 检查安装结果
+    local failed_packages=""
+    for package in xz-utils openssl gawk file wget; do
+        if ! dpkg -l | grep -q "^ii  $package"; then
+            failed_packages="$failed_packages $package"
+        fi
+    done
+    
+    if [ -z "$failed_packages" ]; then
+        echo -e "\n${GREEN}所有基础组件安装成功！${NC}"
+        show_progress 1 "安装完成"
+    else
+        echo -e "\n${RED}以下组件安装失败: $failed_packages${NC}"
+        echo -e "${YELLOW}请检查网络连接并重试${NC}"
+    fi
+}
+
 # 系统清理函数
 clean_system() {
     echo -e "\n${BLUE}开始系统清理...${NC}"
@@ -61,6 +90,7 @@ clean_system() {
     show_progress 1 "清理旧包"
     
     echo -e "\n${CYAN}Step 3/8: 清理孤立的软件包${NC}"
+    apt-get install -y deborphan
     deborphan | xargs apt-get -y remove --purge
     show_progress 1 "清理孤立包"
     
@@ -193,17 +223,20 @@ main_menu() {
         echo -e "${CYAN}1)${NC} 升级到 Debian 11 (Bullseye)"
         echo -e "${CYAN}2)${NC} 升级到 Debian 12 (Bookworm)"
         echo -e "${CYAN}3)${NC} 清理系统垃圾"
-        echo -e "${CYAN}4)${NC} 退出"
+        echo -e "${CYAN}4)${NC} 安装基础组件"
+        echo -e "${CYAN}5)${NC} 退出"
         echo -e "\n${YELLOW}提示: 升级前请确保已备份重要数据${NC}"
         
-        read -p $'\033[0;36m请输入选项 (1-4): \033[0m' choice
+        read -p $'\033[0;36m请输入选项 (1-5): \033[0m' choice
         
         case $choice in
             1)
+                install_base_components
                 upgrade_to_bullseye
                 break
                 ;;
             2)
+                install_base_components
                 upgrade_to_bookworm
                 break
                 ;;
@@ -212,6 +245,10 @@ main_menu() {
                 read -p $'\033[0;36m按回车键返回主菜单\033[0m'
                 ;;
             4)
+                install_base_components
+                read -p $'\033[0;36m按回车键返回主菜单\033[0m'
+                ;;
+            5)
                 echo -e "\n${GREEN}感谢使用，再见！${NC}"
                 exit 0
                 ;;
