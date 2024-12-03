@@ -1,389 +1,240 @@
 #!/bin/bash
+# By xinai.de
+# Debian System Upgrade Script with Enhanced UI
 
-# 颜色定义
+# 定义颜色
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 PURPLE='\033[0;35m'
 CYAN='\033[0;36m'
-WHITE='\033[1;37m'
-NC='\033[0m' # 无色
+NC='\033[0m' # No Color
+BOLD='\033[1m'
 
-# 进度条函数
-show_progress() {
-    local duration=$1
-    local width=50
-    local progress=0
-    local bar_char="█"
-    
-    while [ $progress -lt 100 ]; do
-        let progress=progress+2
-        let current=$width*$progress/100
-        local bar=""
-        for ((i=0; i<current; i++)); do
-            bar="${bar}${bar_char}"
-        done
-        printf "\r[%-${width}s] %d%%" "$bar" "$progress"
-        sleep $duration
-    done
-    echo
-}
-
-# Banner显示
-show_banner() {
+# Logo显示
+show_logo() {
     clear
     echo -e "${CYAN}"
-    echo "╔═══════════════════════════════════════════════╗"
-    echo "║                                               ║"
-    echo "║   🚀 Debian 系统升级助手 v2.0                ║"
-    echo "║   💻 支持: Debian 9/10/11/12                 ║"
-    echo "║   🔧 by: xinai.de                            ║"
-    echo "║                                               ║"
-    echo "╚═══════════════════════════════════════════════╝"
+    echo "▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄"
+    echo "█ Debian System Upgrade Tool                █"
+    echo "█ Created by xinai.de                      █"
+    echo "█ Version: 1.1.0                          █"
+    echo "▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀"
     echo -e "${NC}"
 }
 
-# 检查是否为root用户
+# 显示进度条
+show_progress() {
+    local duration=$1
+    local prefix=$2
+    local width=50
+    local fill="█"
+    local empty="░"
+    
+    echo -ne "\n"
+    for i in $(seq 1 $width); do
+        echo -ne "\r${prefix} [" 
+        for j in $(seq 1 $i); do
+            echo -ne "${CYAN}${fill}${NC}"
+        done
+        for j in $(seq $i $width); do
+            echo -ne "${empty}"
+        done
+        echo -ne "] $((i*100/width))%"
+        sleep $(bc <<< "scale=3; $duration/$width")
+    done
+    echo -ne "\n"
+}
+
+# 系统清理函数
+clean_system() {
+    echo -e "\n${BLUE}开始系统清理...${NC}"
+    echo -e "${YELLOW}注意: 清理过程将移除不必要的文件和软件包${NC}\n"
+    
+    echo -e "${CYAN}Step 1/8: 清理APT缓存${NC}"
+    apt-get clean
+    show_progress 1 "清理APT缓存"
+    
+    echo -e "\n${CYAN}Step 2/8: 清理旧的软件包${NC}"
+    apt-get autoremove -y
+    show_progress 1 "清理旧包"
+    
+    echo -e "\n${CYAN}Step 3/8: 清理孤立的软件包${NC}"
+    deborphan | xargs apt-get -y remove --purge
+    show_progress 1 "清理孤立包"
+    
+    echo -e "\n${CYAN}Step 4/8: 清理临时文件${NC}"
+    rm -rf /tmp/*
+    rm -rf /var/tmp/*
+    show_progress 1 "清理临时文件"
+    
+    echo -e "\n${CYAN}Step 5/8: 清理日志文件${NC}"
+    find /var/log -type f -name "*.log" -exec truncate -s 0 {} \;
+    find /var/log -type f -name "*.gz" -delete
+    show_progress 1 "清理日志"
+    
+    echo -e "\n${CYAN}Step 6/8: 清理缩略图缓存${NC}"
+    find /home -type f -name "*.thumbnail" -delete
+    find /home -type f -name "Thumbs.db" -delete
+    show_progress 1 "清理缩略图"
+    
+    echo -e "\n${CYAN}Step 7/8: 清理Firefox缓存${NC}"
+    find /home -type d -name ".mozilla" -exec rm -rf {}/firefox/*.default/cache \;
+    show_progress 1 "清理浏览器缓存"
+    
+    echo -e "\n${CYAN}Step 8/8: 清理系统缓存${NC}"
+    sync && echo 3 > /proc/sys/vm/drop_caches
+    show_progress 1 "清理系统缓存"
+    
+    # 显示清理结果
+    echo -e "\n${GREEN}系统清理完成！${NC}"
+    echo -e "清理前磁盘使用情况:"
+    echo -e "${YELLOW}$disk_space_before${NC}"
+    disk_space_after=$(df -h / | awk 'NR==2 {print $4}')
+    echo -e "清理后磁盘使用情况:"
+    echo -e "${GREEN}$disk_space_after${NC}"
+}
+
+# 检查是否以root权限运行
 check_root() {
     if [ "$EUID" -ne 0 ]; then 
-        echo -e "${RED}错误: 请使用root权限运行此脚本${NC}"
+        echo -e "${RED}${BOLD}错误: 请以root权限运行此脚本${NC}"
+        echo -e "使用命令: ${YELLOW}sudo $0${NC}"
         exit 1
     fi
 }
 
-# 内核版本映射
-declare -A KERNEL_VERSIONS=(
-    ["9"]="4.9.0"  # Debian 9 (Stretch)
-    ["10"]="4.19.0" # Debian 10 (Buster)
-    ["11"]="5.10.0" # Debian 11 (Bullseye)
-    ["12"]="6.1.0"  # Debian 12 (Bookworm)
-)
-
-# 内核管理函数
-manage_kernel() {
-    local target_version=$1
-    local kernel_version=${KERNEL_VERSIONS[$target_version]}
+# 系统信息检查
+check_system_info() {
+    echo -e "${BLUE}正在检查系统信息...${NC}"
+    show_progress 2 "系统检查"
     
-    echo -e "${YELLOW}正在配置内核版本 $kernel_version...${NC}"
+    # 获取系统信息
+    current_version=$(cat /etc/debian_version)
+    total_memory=$(free -h | awk '/^Mem:/{print $2}')
+    available_memory=$(free -h | awk '/^Mem:/{print $7}')
+    disk_space=$(df -h / | awk 'NR==2 {print $4}')
+    disk_space_before=$disk_space
     
-    case $target_version in
-        "9")
-            apt install -y linux-image-$kernel_version-amd64 linux-headers-$kernel_version-amd64
-            ;;
-        "10")
-            apt install -y linux-image-$kernel_version-amd64 linux-headers-$kernel_version-amd64
-            ;;
-        "11")
-            apt install -y linux-image-$kernel_version-amd64 linux-headers-$kernel_version-amd64
-            ;;
-        "12")
-            apt install -y linux-image-$kernel_version-amd64 linux-headers-$kernel_version-amd64
-            ;;
-    esac
+    echo -e "\n${BOLD}系统信息:${NC}"
+    echo -e "${CYAN}▸ 当前Debian版本:${NC} $current_version"
+    echo -e "${CYAN}▸ 总内存:${NC} $total_memory"
+    echo -e "${CYAN}▸ 可用内存:${NC} $available_memory"
+    echo -e "${CYAN}▸ 根分区可用空间:${NC} $disk_space"
+    echo -e "\n${YELLOW}注意: 升级需要至少2GB可用内存和5GB磁盘空间${NC}\n"
 }
 
-# 系统检查函数
-check_system() {
-    echo -e "${BLUE}正在进行系统检查...${NC}"
-    
-    # 检查磁盘空间
-    local free_space=$(df -h / | awk 'NR==2 {print $4}' | sed 's/G//')
-    if [ $(echo "$free_space < 5" | bc) -eq 1 ]; then
-        echo -e "${RED}警告: 系统剩余空间不足 5GB (当前: ${free_space}GB)${NC}"
-        echo -e "${YELLOW}建议清理磁盘空间后再继续${NC}"
-        exit 1
-    fi
-    
-    # 检查内存
-    local total_mem=$(free -m | awk '/^Mem:/{print $2}')
-    if [ $total_mem -lt 1024 ]; then
-        echo -e "${YELLOW}警告: 系统内存小于1GB，可能影响升级过程${NC}"
-    fi
-    
-    echo -e "${GREEN}系统检查完成√${NC}"
+# 备份sources.list
+backup_sources() {
+    local backup_file="/etc/apt/sources.list.backup.$(date +%Y%m%d)"
+    echo -e "${BLUE}正在备份sources.list...${NC}"
+    cp /etc/apt/sources.list $backup_file
+    show_progress 1 "备份进行中"
+    echo -e "${GREEN}已备份到: $backup_file${NC}"
 }
 
-# 备份配置
-backup_configs() {
-    echo -e "${BLUE}正在备份系统配置...${NC}"
-    local backup_dir="/root/debian_upgrade_backup_$(date +%Y%m%d_%H%M%S)"
-    mkdir -p "$backup_dir"
+# 更新系统
+update_system() {
+    echo -e "\n${BLUE}开始系统更新...${NC}"
+    echo -e "${YELLOW}注意: 更新过程可能需要较长时间，请保持网络连接${NC}\n"
     
-    # 创建备份列表
-    local backup_list=(
-        "/etc/apt/sources.list"
-        "/etc/network"
-        "/etc/fstab"
-        "/etc/hostname"
-        "/etc/hosts"
-        "/etc/ssh/sshd_config"
-    )
+    echo -e "${CYAN}Step 1/4: 更新软件源${NC}"
+    apt update
     
-    for item in "${backup_list[@]}"; do
-        if [ -e "$item" ]; then
-            cp -r "$item" "$backup_dir/"
-            echo -e "${GREEN}已备份: $item${NC}"
-        fi
-    done
+    echo -e "\n${CYAN}Step 2/4: 升级已安装的包${NC}"
+    apt upgrade -y
     
-    echo -e "${GREEN}配置备份完成，存储在: $backup_dir${NC}"
+    echo -e "\n${CYAN}Step 3/4: 进行完整升级${NC}"
+    apt full-upgrade -y
+    
+    echo -e "\n${CYAN}Step 4/4: 清理无用包${NC}"
+    apt autoremove -y
+    apt clean
 }
 
-# 系统清理
-clean_system() {
-    echo -e "${BLUE}正在清理系统...${NC}"
+# 升级到Debian 11
+upgrade_to_bullseye() {
+    echo -e "\n${PURPLE}准备升级到 Debian 11 (Bullseye)...${NC}"
+    backup_sources
     
-    # 首先尝试修复系统
-    echo -e "${YELLOW}修复包管理系统...${NC}"
-    dpkg --configure -a
-    apt-get install -f -y
-    
-    apt-get autoremove -y
-    apt-get clean
-    apt-get autoclean
-    
-    # 改进的内核清理逻辑
-    echo -e "${YELLOW}清理旧内核...${NC}"
-    
-    # 获取当前运行的内核版本
-    current_kernel=$(uname -r)
-    echo -e "${BLUE}当前使用的内核版本: $current_kernel${NC}"
-    
-    # 获取已安装的所有内核包列表
-    kernel_packages=$(dpkg -l 'linux-image*' | awk '/^ii/ {print $2}')
-    
-    # 计算要保留的内核包名
-    current_kernel_pkg="linux-image-${current_kernel}"
-    
-    # 逐个检查并删除旧内核
-    for pkg in $kernel_packages; do
-        # 跳过当前内核和必要的内核包
-        if [[ "$pkg" == *"$current_kernel"* ]] || \
-           [[ "$pkg" == "linux-image-amd64" ]] || \
-           [[ "$pkg" == "linux-image-generic" ]]; then
-            echo -e "${GREEN}保留内核包: $pkg${NC}"
-            continue
-        fi
-        
-        echo -e "${YELLOW}正在移除旧内核包: $pkg${NC}"
-        if ! apt-get remove --purge -y "$pkg"; then
-            echo -e "${RED}移除 $pkg 失败，尝试强制移除...${NC}"
-            if ! dpkg --force-all -P "$pkg"; then
-                echo -e "${RED}强制移除 $pkg 也失败，跳过...${NC}"
-            fi
-        fi
-    done
-    
-    # 清理可能存在的孤立内核头文件包
-    echo -e "${YELLOW}清理孤立的内核头文件包...${NC}"
-    header_packages=$(dpkg -l 'linux-headers*' | awk '/^ii/ {print $2}')
-    for pkg in $header_packages; do
-        if [[ "$pkg" != *"$current_kernel"* ]] && \
-           [[ "$pkg" != "linux-headers-amd64" ]] && \
-           [[ "$pkg" != "linux-headers-generic" ]]; then
-            echo -e "${YELLOW}移除旧内核头文件包: $pkg${NC}"
-            apt-get remove --purge -y "$pkg" || dpkg --force-all -P "$pkg"
-        fi
-    done
-    
-    # 最后再次运行自动清理
-    apt-get autoremove -y
-    apt-get clean
-    
-    echo -e "${GREEN}系统清理完成√${NC}"
-}
-
-# 更新软件源
-update_sources() {
-    local version=$1
-    echo -e "${BLUE}正在更新软件源配置...${NC}"
-    
-    case $version in
-        "10")
-            cat > /etc/apt/sources.list << EOF
-# Debian 10 (Buster)
-deb http://deb.debian.org/debian buster main contrib non-free
-deb http://deb.debian.org/debian buster-updates main contrib non-free
-deb http://security.debian.org/debian-security buster/updates main contrib non-free
-EOF
-            ;;
-        "11")
-            cat > /etc/apt/sources.list << EOF
-# Debian 11 (Bullseye)
+    echo -e "\n${BLUE}更新软件源配置...${NC}"
+    cat > /etc/apt/sources.list << EOF
 deb http://deb.debian.org/debian bullseye main contrib non-free
 deb http://deb.debian.org/debian bullseye-updates main contrib non-free
 deb http://security.debian.org/debian-security bullseye-security main contrib non-free
 EOF
-            ;;
-        "12")
-            cat > /etc/apt/sources.list << EOF
-# Debian 12 (Bookworm)
+    
+    update_system
+    echo -e "\n${GREEN}${BOLD}系统已成功升级到 Debian 11${NC}"
+}
+
+# 升级到Debian 12
+upgrade_to_bookworm() {
+    echo -e "\n${PURPLE}准备升级到 Debian 12 (Bookworm)...${NC}"
+    backup_sources
+    
+    echo -e "\n${BLUE}更新软件源配置...${NC}"
+    cat > /etc/apt/sources.list << EOF
 deb http://deb.debian.org/debian bookworm main contrib non-free non-free-firmware
 deb http://deb.debian.org/debian bookworm-updates main contrib non-free non-free-firmware
 deb http://security.debian.org/debian-security bookworm-security main contrib non-free non-free-firmware
 EOF
-            ;;
-    esac
     
-    echo -e "${GREEN}软件源更新完成√${NC}"
-}
-
-# 执行升级
-do_upgrade() {
-    echo -e "${BLUE}开始系统升级流程...${NC}"
-    
-    # 首先尝试修复可能被中断的dpkg
-    echo -e "${YELLOW}检查并修复dpkg状态...${NC}"
-    dpkg --configure -a
-    
-    # 修复可能的依赖关系问题
-    echo -e "${YELLOW}修复可能的依赖关系问题...${NC}"
-    apt-get install -f -y
-    
-    echo -e "${YELLOW}更新软件包信息...${NC}"
-    apt-get clean
-    rm -rf /var/lib/apt/lists/*
-    apt-get update
-    show_progress 0.1
-    
-    echo -e "${YELLOW}升级基础系统包...${NC}"
-    apt-get install -y apt dpkg apt-utils
-    show_progress 0.1
-    
-    # 再次检查并修复可能的问题
-    dpkg --configure -a
-    apt-get install -f -y
-    
-    echo -e "${YELLOW}执行系统升级...${NC}"
-    apt-get upgrade -y
-    show_progress 0.1
-    
-    echo -e "${YELLOW}执行完整升级...${NC}"
-    apt-get full-upgrade -y
-    show_progress 0.1
-    
-    echo -e "${YELLOW}清理无用包...${NC}"
-    apt-get autoremove -y
-    apt-get clean
-    show_progress 0.1
-    
-    echo -e "${GREEN}升级完成√${NC}"
-}
-
-# 检查升级结果
-check_upgrade_result() {
-    echo -e "${BLUE}正在检查升级结果...${NC}"
-    
-    # 检查包状态
-    if dpkg -l | grep -q "^..F"; then
-        echo -e "${RED}警告: 发现损坏的软件包${NC}"
-        echo -e "${YELLOW}尝试修复...${NC}"
-        apt install -f -y
-    fi
-    
-    # 检查服务状态
-    local failed_services=$(systemctl --failed)
-    if [ -n "$failed_services" ]; then
-        echo -e "${RED}警告: 以下服务出现故障:${NC}"
-        echo "$failed_services"
-    fi
-    
-    echo -e "${GREEN}检查完成√${NC}"
+    update_system
+    echo -e "\n${GREEN}${BOLD}系统已成功升级到 Debian 12${NC}"
 }
 
 # 主菜单
-show_menu() {
-    show_banner
-    echo -e "${WHITE}当前系统版本: ${GREEN}Debian $current_version${NC}"
-    echo
-    echo -e "${CYAN}可用升级选项:${NC}"
-    echo -e "${WHITE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo -e "${WHITE}1)${NC} ${GREEN}升级到 Debian 10 (Buster)${NC}"
-    echo -e "${WHITE}2)${NC} ${GREEN}升级到 Debian 11 (Bullseye)${NC}"
-    echo -e "${WHITE}3)${NC} ${GREEN}升级到 Debian 12 (Bookworm)${NC}"
-    echo -e "${WHITE}4)${NC} ${RED}退出${NC}"
-    echo -e "${WHITE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+main_menu() {
+    while true; do
+        show_logo
+        echo -e "${BOLD}请选择操作:${NC}"
+        echo -e "${CYAN}1)${NC} 升级到 Debian 11 (Bullseye)"
+        echo -e "${CYAN}2)${NC} 升级到 Debian 12 (Bookworm)"
+        echo -e "${CYAN}3)${NC} 清理系统垃圾"
+        echo -e "${CYAN}4)${NC} 退出"
+        echo -e "\n${YELLOW}提示: 升级前请确保已备份重要数据${NC}"
+        
+        read -p $'\033[0;36m请输入选项 (1-4): \033[0m' choice
+        
+        case $choice in
+            1)
+                upgrade_to_bullseye
+                break
+                ;;
+            2)
+                upgrade_to_bookworm
+                break
+                ;;
+            3)
+                clean_system
+                read -p $'\033[0;36m按回车键返回主菜单\033[0m'
+                ;;
+            4)
+                echo -e "\n${GREEN}感谢使用，再见！${NC}"
+                exit 0
+                ;;
+            *)
+                echo -e "\n${RED}无效选项，请重新选择${NC}"
+                sleep 2
+                ;;
+        esac
+    done
 }
 
-# 获取当前debian版本
-current_version=$(cat /etc/debian_version | cut -d. -f1)
-
-# 主程序
+# 脚本主体
 check_root
-show_menu
+check_system_info
+main_menu
 
-read -p "$(echo -e ${CYAN}请输入选项 [1-4]:${NC} )" choice
+echo -e "\n${YELLOW}${BOLD}升级完成后建议重启系统以应用所有更改${NC}"
+read -p $'\033[0;36m是否现在重启? (y/n): \033[0m' reboot_choice
 
-case $choice in
-    1)
-        if [ "$current_version" -gt 10 ]; then
-            echo -e "${RED}错误: 无法降级到较低版本${NC}"
-            exit 1
-        fi
-        echo -e "${GREEN}准备升级到 Debian 10...${NC}"
-        check_system
-        backup_configs
-        clean_system
-        update_sources "10"
-        manage_kernel "10"
-        do_upgrade
-        check_upgrade_result
-        ;;
-    2)
-        if [ "$current_version" -gt 11 ]; then
-            echo -e "${RED}错误: 无法降级到较低版本${NC}"
-            exit 1
-        fi
-        echo -e "${GREEN}准备升级到 Debian 11...${NC}"
-        check_system
-        backup_configs
-        clean_system
-        update_sources "11"
-        manage_kernel "11"
-        do_upgrade
-        check_upgrade_result
-        ;;
-    3)
-        if [ "$current_version" -gt 12 ]; then
-            echo -e "${RED}错误: 无法降级到较低版本${NC}"
-            exit 1
-        fi
-        echo -e "${GREEN}准备升级到 Debian 12...${NC}"
-        check_system
-        backup_configs
-        clean_system
-        update_sources "12"
-        manage_kernel "12"
-        do_upgrade
-        check_upgrade_result
-        ;;
-    4)
-        echo -e "${YELLOW}退出脚本${NC}"
-        exit 0
-        ;;
-    *)
-        echo -e "${RED}无效选项${NC}"
-        exit 1
-        ;;
-esac
-
-echo -e "\n${GREEN}升级流程已完成!${NC}"
-echo -e "${YELLOW}升级后检查事项:${NC}"
-echo -e "${WHITE}1. 检查重要服务状态: ${CYAN}systemctl --failed${NC}"
-echo -e "${WHITE}2. 检查系统日志: ${CYAN}tail -n 50 /var/log/syslog${NC}"
-echo -e "${WHITE}3. 检查网络连接${NC}"
-echo -e "${WHITE}4. 检查新内核版本: ${CYAN}uname -r${NC}"
-
-echo -e "\n${YELLOW}是否现在重启系统? (y/n)${NC}"
-read -p "> " restart
-
-if [ "$restart" = "y" ] || [ "$restart" = "Y" ]; then
-    echo -e "${GREEN}系统将在5秒后重启...${NC}"
-    for i in {5..1}; do
-        echo -ne "${YELLOW}$i...${NC}"
-        sleep 1
-    done
-    echo
+if [ "$reboot_choice" = "y" ] || [ "$reboot_choice" = "Y" ]; then
+    echo -e "\n${GREEN}系统将在5秒后重启...${NC}"
+    sleep 5
     reboot
+else
+    echo -e "\n${GREEN}请记得稍后手动重启系统${NC}"
 fi
