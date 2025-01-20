@@ -201,8 +201,6 @@ use.typekit.net
 typekit.net
 chat.openai.com
 openai.com
-www.cloudflare.com
-cloudflare.com
 id.me
 api.id.me
 amazon.co.jp
@@ -297,3 +295,14 @@ accounts.google.se
 www.google.se
 shuzijumin.com
 www.shuzijumin.com
+fidelity.com
+www.fidelity.com
+linux.do
+www.linux.do
+dash.cloudflare.com
+cloudflare.com
+www.cloudflare.com
+uscardforum.com
+www.uscardforum.com
+asset-cdn.uscardforum.com
+www-cdn.uscardforum.com
