@@ -240,7 +240,6 @@ oaistatic.com
 www.oaistatic.com
 oaiusercontent.com
 www.oaiusercontent.com
-translate.googleapis.com
 googleapis.com
 www.paypalobjects.com
 paypalobjects.com
@@ -305,3 +304,9 @@ asset-cdn.uscardforum.com
 www-cdn.uscardforum.com
 www.nodeseek.com
 nodeseek.com
+fonts.gstatic.com
+gstatic.com
+x.com
+x.company
+translate-pa.googleapis.com
+translate.googleapis.com
