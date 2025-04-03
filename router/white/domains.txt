@@ -9,6 +9,10 @@ m.jd.com
 jd.com
 storage.360buyimg.com
 360buyimg.com
+vlive.qqvideo.tc.qq.com
+qq.com
+weixin.com
+v.qq.com
 apd-pcdnwxlogin.teg.tencent-cloud.net
 dldir1.qq.com
 slife.xy-asia.com
