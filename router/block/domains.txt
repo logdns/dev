@@ -354,3 +354,6 @@ gemini.google.com
 generativeai.google  
 proactivebackend-pa.googleapis.com  
 apis.google.com  
+push.apple.com
+akadns.net
+apple.com.edgekey.net
