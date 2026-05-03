@@ -359,3 +359,6 @@ apis.google.com
 push.apple.com
 akadns.net
 apple.com.edgekey.net
+gateway.push.apple.com
+api.push.apple.com
+sandbox.push.apple.com
