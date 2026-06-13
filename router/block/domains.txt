@@ -362,3 +362,14 @@ apple.com.edgekey.net
 gateway.push.apple.com
 api.push.apple.com
 sandbox.push.apple.com
+lbkrs.com
+longbridge.app
+longbridge.global
+longportapp.com
+longbridge.com
+api.lbkrs.com
+api-gl.lbkrs.com
+moomoo.com
+futuhn.com
+futustatic.com
+futunn.com
