@@ -50,3 +50,10 @@ cat mydiy-karing-unsupported.txt
 3. 选择 `mydiy-karing-diversion.json`。
 4. 导入后到“分流规则”页面确认排序，并把 `final` 设置为当前选择或代理策略。
 5. 断开并重新连接 Karing，使规则生效。
+
+<img width="341" height="311" alt="eebcf8aa8cad498008c05ad334a85b73" src="https://github.com/user-attachments/assets/c141171e-ebf8-43eb-a918-736ffba12da2" />
+<img width="409" height="602" alt="d55422654b39d3fdb3e178dbfe31c97d" src="https://github.com/user-attachments/assets/d2a36c6f-974a-4e4a-83f4-a94ab51cab87" />
+<img width="400" height="724" alt="fc11bcb5244323411035aa9a013f7fde" src="https://github.com/user-attachments/assets/948e33e1-ed71-4e83-91fb-71be8d036ab6" />
+
+
+
