@@ -373,3 +373,4 @@ moomoo.com
 futuhn.com
 futustatic.com
 futunn.com
+challenges.cloudflare.com
